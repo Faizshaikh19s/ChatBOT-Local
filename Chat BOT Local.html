@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wi-Fi Direct Chat</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .fade-in { animation: fadeIn 0.3s; }
+        .slide-up { animation: slideUp 0.3s; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideUp { from { transform: translateY(10px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        .message-sent { background-color: #3b82f6; color: white; border-radius: 18px 18px 4px 18px; }
+        .message-received { background-color: #f1f5f9; color: #334155; border-radius: 18px 18px 18px 4px; }
+        .pulse-online { animation: pulse 2s infinite; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+        .typing-indicator { display: inline-block; position: relative; }
+        .typing-indicator span { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #6b7280; margin: 0 1px; animation: typing 1.4s infinite ease-in-out; }
+        .typing-indicator span:nth-child(1) { animation-delay: -0.32s; }
+        .typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
+        @keyframes typing { 0%, 80%, 100% { transform: scale(0.8); opacity: 0.5; } 40% { transform: scale(1); opacity: 1; } }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen flex items-center justify-center p-4">
+    <div class="w-full max-w-md bg-white rounded-2xl shadow-xl overflow-hidden">
+        <!-- User ID Setup Screen -->
+        <div id="setupScreen" class="p-6 fade-in">
+            <div class="text-center mb-8">
+                <div class="w-20 h-20 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-md">
+                    <i class="fas fa-wifi text-white text-3xl"></i>
+                </div>
+                <h1 class="text-3xl font-bold text-gray-800">Wi-Fi Direct Chat</h1>
+                <p class="text-gray-600 mt-2">Connect with others on the same network</p>
+            </div>
+            
+            <form id="idForm" class="space-y-6">
+                <div>
+                    <label for="userId" class="block text-sm font-medium text-gray-700 mb-2">Your 6-Digit ID</label>
+                    <div class="relative">
+                        <input 
+                            type="text" 
+                            id="userId" 
+                            maxlength="6" 
+                            pattern="\d{6}" 
+                            required 
+                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition text-center text-lg font-semibold tracking-widest"
+                            placeholder="123456"
+                        >
+                        <div class="absolute inset-y-0 right-0 flex items-center pr-3">
+                            <i class="fas fa-id-card text-gray-400"></i>
+                        </div>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-2 text-center">This ID will be used to identify you in the network</p>
+                </div>
+                
+                <button 
+                    type="submit" 
+                    class="w-full bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white font-medium py-3 px-4 rounded-lg transition flex items-center justify-center shadow-md"
+                >
+                    <i class="fas fa-sign-in-alt mr-2"></i> Join Chat Network
+                </button>
+            </form>
+            
+            <div class="mt-8 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <h3 class="font-medium text-blue-800 flex items-center">
+                    <i class="fas fa-info-circle mr-2"></i> How it works
+                </h3>
+                <ul class="text-sm text-blue-700 mt-2 space-y-2">
+                    <li class="flex items-start">
+                        <i class="fas fa-wifi mr-2 mt-1"></i>
+                        <span>Connect to the same Wi-Fi network</span>
+                    </li>
+                    <li class="flex items-start">
+                        <i class="fas fa-id-card mr-2 mt-1"></i>
+                        <span>Share your ID with friends</span>
+                    </li>
+                    <li class="flex items-start">
+                        <i class="fas fa-comments mr-2 mt-1"></i>
+                        <span>Enter their ID to start chatting</span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+        
+        <!-- Main Chat Screen -->
+        <div id="chatScreen" class="hidden h-screen flex flex-col">
+            <!-- Header -->
+            <div class="bg-gradient-to-r from-blue-500 to-purple-600 text-white p-4 flex items-center justify-between shadow-lg">
+                <div class="flex items-center">
+                    <button id="backButton" class="mr-3 bg-white/20 hover:bg-white/30 p-2 rounded-full transition">
+                        <i class="fas fa-arrow-left"></i>
+                    </button>
+                    <div>
+                        <h2 class="font-semibold">Chat with <span id="partnerIdDisplay" class="font-bold">---</span></h2>
+                        <p class="text-blue-100 text-xs flex items-center">
+                            <i class="fas fa-wifi mr-1"></i> Connected via Wi-Fi Direct
+                        </p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-3">
+                    <div id="connectionIndicator" class="w-3 h-3 bg-green-400 rounded-full pulse-online"></div>
+                    <span class="text-sm">Online</span>
+                </div>
+            </div>
+            
+            <!-- Connection Status -->
+            <div id="connectionStatus" class="bg-yellow-50 border-b border-yellow-200 p-3 text-center text-sm text-yellow-700 hidden">
+                <i class="fas fa-wifi mr-1"></i> Connecting to partner...
+            </div>
+            
+            <!-- Messages Container -->
+            <div id="messagesContainer" class="flex-1 p-4 overflow-y-auto space-y-3 bg-gradient-to-b from-white to-blue-50">
+                <div class="text-center text-gray-500 text-sm py-8">
+                    <i class="fas fa-comment-dots text-3xl mb-3 block text-blue-300"></i>
+                    <p>No messages yet. Start a conversation!</p>
+                </div>
+            </div>
+            
+            <!-- Typing Indicator -->
+            <div id="typingIndicator" class="hidden px-4 py-2 bg-white">
+                <div class="text-sm text-gray-500 italic flex items-center">
+                    <span id="typingPartnerId" class="font-semibold mr-1"></span> is typing
+                    <div class="typing-indicator ml-2">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Message Input -->
+            <div class="border-t border-gray-200 p-4 bg-white">
+                <div class="flex space-x-2">
+                    <input 
+                        type="text" 
+                        id="messageInput" 
+                        placeholder="Type a message..." 
+                        class="flex-1 border border-gray-300 rounded-full px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                        maxlength="200"
+                    >
+                    <button 
+                        id="sendButton" 
+                        class="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white rounded-full w-12 h-12 flex items-center justify-center transition shadow-md"
+                    >
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Connect to Partner Screen -->
+        <div id="connectScreen" class="hidden p-6 fade-in">
+            <div class="text-center mb-8">
+                <div class="w-20 h-20 bg-gradient-to-r from-green-500 to-blue-500 rounded-full flex items-center justify-center mx-auto mb-4 shadow-md">
+                    <i class="fas fa-user-plus text-white text-3xl"></i>
+                </div>
+                <h1 class="text-3xl font-bold text-gray-800">Connect to Partner</h1>
+                <p class="text-gray-600 mt-2">Enter your partner's ID to start chatting</p>
+            </div>
+            
+            <form id="connectForm" class="space-y-6">
+                <div>
+                    <label for="partnerId" class="block text-sm font-medium text-gray-700 mb-2">Partner's 6-Digit ID</label>
+                    <div class="relative">
+                        <input 
+                            type="text" 
+                            id="partnerId" 
+                            maxlength="6" 
+                            pattern="\d{6}" 
+                            required 
+                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition text-center text-lg font-semibold tracking-widest"
+                            placeholder="654321"
+                        >
+                        <div class="absolute inset-y-0 right-0 flex items-center pr-3">
+                            <i class="fas fa-user-friends text-gray-400"></i>
+                        </div>
+                    </div>
+                </div>
+                
+                <button 
+                    type="submit" 
+                    class="w-full bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white font-medium py-3 px-4 rounded-lg transition flex items-center justify-center shadow-md"
+                >
+                    <i class="fas fa-link mr-2"></i> Connect to Partner
+                </button>
+            </form>
+            
+            <div class="mt-6 p-4 bg-green-50 rounded-lg border border-green-200">
+                <h3 class="font-medium text-green-800 flex items-center">
+                    <i class="fas fa-lightbulb mr-2"></i> Pro Tip
+                </h3>
+                <p class="text-sm text-green-700 mt-2">
+                    Make sure your partner is connected to the same Wi-Fi network and has already set up their ID.
+                </p>
+            </div>
+            
+            <button 
+                id="backToMain" 
+                class="w-full mt-4 bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-3 px-4 rounded-lg transition flex items-center justify-center"
+            >
+                <i class="fas fa-arrow-left mr-2"></i> Back to Main
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Application state
+        const appState = {
+            userId: null,
+            partnerId: null,
+            isConnected: false,
+            messages: [],
+            // Simulated network peers (in a real app, this would be handled by a server)
+            networkPeers: {},
+            typingTimeout: null
+        };
+
+        // DOM Elements
+        const setupScreen = document.getElementById('setupScreen');
+        const chatScreen = document.getElementById('chatScreen');
+        const connectScreen = document.getElementById('connectScreen');
+        const idForm = document.getElementById('idForm');
+        const connectForm = document.getElementById('connectForm');
+        const userIdInput = document.getElementById('userId');
+        const partnerIdInput = document.getElementById('partnerId');
+        const partnerIdDisplay = document.getElementById('partnerIdDisplay');
+        const messagesContainer = document.getElementById('messagesContainer');
+        const messageInput = document.getElementById('messageInput');
+        const sendButton = document.getElementById('sendButton');
+        const backButton = document.getElementById('backButton');
+        const backToMain = document.getElementById('backToMain');
+        const connectionStatus = document.getElementById('connectionStatus');
+        const connectionIndicator = document.getElementById('connectionIndicator');
+        const typingIndicator = document.getElementById('typingIndicator');
+        const typingPartnerId = document.getElementById('typingPartnerId');
+
+        // Initialize the app
+        function initApp() {
+            // Check if user ID is already stored
+            const storedUserId = localStorage.getItem('wifiChatUserId');
+            if (storedUserId) {
+                appState.userId = storedUserId;
+                showConnectScreen();
+            }
+            
+            // Set up event listeners
+            idForm.addEventListener('submit', handleUserIdSubmit);
+            connectForm.addEventListener('submit', handleConnectSubmit);
+            sendButton.addEventListener('click', sendMessage);
+            messageInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') sendMessage();
+            });
+            messageInput.addEventListener('input', handleTyping);
+            backButton.addEventListener('click', showConnectScreen);
+            backToMain.addEventListener('click', showConnectScreen);
+            
+            // Validate numeric input for ID fields
+            [userIdInput, partnerIdInput].forEach(input => {
+                input.addEventListener('input', (e) => {
+                    e.target.value = e.target.value.replace(/\D/g, '');
+                });
+            });
+            
+            // Initialize network simulation
+            initNetworkSimulation();
+        }
+
+        // Initialize network simulation
+        function initNetworkSimulation() {
+            // In a real app, this would be a WebSocket connection to a server
+            // For simulation, we'll use localStorage to simulate network communication
+            window.addEventListener('storage', handleNetworkEvent);
+            
+            // Also check for messages periodically
+            setInterval(checkForMessages, 500);
+        }
+
+        // Handle network events (simulated)
+        function handleNetworkEvent(e) {
+            if (e.key && e.key.startsWith('wifiChat_')) {
+                try {
+                    const message = JSON.parse(e.newValue);
+                    if (message && message.targetId === appState.userId) {
+                        processIncomingMessage(message);
+                    }
+                } catch (error) {
+                    console.error('Error processing network message:', error);
+                }
+            }
+        }
+
+        // Check for new messages (simulated)
+        function checkForMessages() {
+            // Check for messages targeted to this user
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key && key.startsWith('wifiChat_')) {
+                    try {
+                        const message = JSON.parse(localStorage.getItem(key));
+                        if (message && message.targetId === appState.userId) {
+                            processIncomingMessage(message);
+                            // Remove the message after processing
+                            localStorage.removeItem(key);
+                        }
+                    } catch (error) {
+                        console.error('Error checking for messages:', error);
+                    }
+                }
+            }
+        }
+
+        // Process incoming message
+        function processIncomingMessage(message) {
+            if (message.type === 'chat') {
+                receiveMessage(message.data);
+            } else if (message.type === 'typing') {
+                showTypingIndicator(message.senderId);
+            } else if (message.type === 'connection') {
+                if (message.data === 'connected' && message.senderId === appState.partnerId) {
+                    handlePartnerConnected();
+                }
+            }
+        }
+
+        // Handle user ID submission
+        function handleUserIdSubmit(e) {
+            e.preventDefault();
+            const userId = userIdInput.value.trim();
+            
+            if (userId.length !== 6) {
+                showNotification('Please enter a 6-digit ID', 'error');
+                return;
+            }
+            
+            // Store user ID in localStorage
+            localStorage.setItem('wifiChatUserId', userId);
+            appState.userId = userId;
+            
+            showConnectScreen();
+        }
+
+        // Show connect screen
+        function showConnectScreen() {
+            setupScreen.classList.add('hidden');
+            chatScreen.classList.add('hidden');
+            connectScreen.classList.remove('hidden');
+        }
+
+        // Handle connect to partner
+        function handleConnectSubmit(e) {
+            e.preventDefault();
+            const partnerId = partnerIdInput.value.trim();
+            
+            if (partnerId.length !== 6) {
+                showNotification('Please enter a valid 6-digit partner ID', 'error');
+                return;
+            }
+            
+            if (partnerId === appState.userId) {
+                showNotification('You cannot chat with yourself!', 'error');
+                return;
+            }
+            
+            appState.partnerId = partnerId;
+            partnerIdDisplay.textContent = partnerId;
+            
+            // Show connecting status
+            connectionStatus.classList.remove('hidden');
+            connectionIndicator.classList.remove('bg-green-400', 'pulse-online');
+            connectionIndicator.classList.add('bg-yellow-400');
+            
+            // Simulate connection attempt
+            setTimeout(() => {
+                // In a real app, you would check if the partner exists on the network
+                // For simulation, we'll assume the partner is available
+                
+                // Send connection request to partner
+                sendNetworkMessage({
+                    type: 'connection',
+                    data: 'connected',
+                    senderId: appState.userId,
+                    targetId: appState.partnerId
+                });
+                
+                // Assume connection is successful after a short delay
+                setTimeout(() => {
+                    connectionStatus.classList.add('hidden');
+                    connectionIndicator.classList.remove('bg-yellow-400');
+                    connectionIndicator.classList.add('bg-green-400', 'pulse-online');
+                    appState.isConnected = true;
+                    showChatScreen();
+                    
+                    showNotification(`Connected to partner ${appState.partnerId}`, 'success');
+                }, 1500);
+            }, 1000);
+        }
+
+        // Handle partner connected
+        function handlePartnerConnected() {
+            if (!appState.isConnected && appState.partnerId) {
+                connectionStatus.classList.add('hidden');
+                connectionIndicator.classList.remove('bg-yellow-400');
+                connectionIndicator.classList.add('bg-green-400', 'pulse-online');
+                appState.isConnected = true;
+                
+                showNotification(`Partner ${appState.partnerId} connected to you`, 'success');
+            }
+        }
+
+        // Show chat screen
+        function showChatScreen() {
+            setupScreen.classList.add('hidden');
+            connectScreen.classList.add('hidden');
+            chatScreen.classList.remove('hidden');
+            
+            // Clear any previous messages
+            messagesContainer.innerHTML = '';
+            
+            // Display any stored messages
+            appState.messages.forEach(message => {
+                displayMessage(message);
+            });
+            
+            // Focus on message input
+            messageInput.focus();
+        }
+
+        // Send a message
+        function sendMessage() {
+            const text = messageInput.value.trim();
+            if (!text || !appState.isConnected) return;
+            
+            // Create message object
+            const message = {
+                id: Date.now(),
+                senderId: appState.userId,
+                text: text,
+                timestamp: new Date(),
+                type: 'sent'
+            };
+            
+            // Add to messages and display
+            appState.messages.push(message);
+            displayMessage(message);
+            
+            // Clear input
+            messageInput.value = '';
+            
+            // Send via simulated network
+            sendNetworkMessage({
+                type: 'chat',
+                data: message,
+                senderId: appState.userId,
+                targetId: appState.partnerId
+            });
+            
+            // Clear typing indicator
+            clearTypingIndicator();
+        }
+
+        // Send message via simulated network
+        function sendNetworkMessage(message) {
+            const key = `wifiChat_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+            localStorage.setItem(key, JSON.stringify(message));
+            
+            // Trigger storage event for other tabs
+            window.dispatchEvent(new Event('storage'));
+        }
+
+        // Receive a message
+        function receiveMessage(message) {
+            message.type = 'received';
+            appState.messages.push(message);
+            displayMessage(message);
+            
+            // Show notification if tab is not active
+            if (document.hidden) {
+                showNotification(`New message from ${message.senderId}`, 'info');
+            }
+        }
+
+        // Handle typing indicator
+        function handleTyping() {
+            if (!appState.isConnected) return;
+            
+            // Send typing indicator
+            sendNetworkMessage({
+                type: 'typing',
+                data: 'typing',
+                senderId: appState.userId,
+                targetId: appState.partnerId
+            });
+            
+            // Clear previous timeout
+            if (appState.typingTimeout) {
+                clearTimeout(appState.typingTimeout);
+            }
+            
+            // Set timeout to clear typing indicator
+            appState.typingTimeout = setTimeout(() => {
+                clearTypingIndicator();
+            }, 2000);
+        }
+
+        // Show typing indicator
+        function showTypingIndicator(partnerId) {
+            if (partnerId === appState.partnerId) {
+                typingPartnerId.textContent = partnerId;
+                typingIndicator.classList.remove('hidden');
+                
+                // Auto-hide after 3 seconds
+                setTimeout(() => {
+                    typingIndicator.classList.add('hidden');
+                }, 3000);
+            }
+        }
+
+        // Clear typing indicator
+        function clearTypingIndicator() {
+            typingIndicator.classList.add('hidden');
+        }
+
+        // Display a message in the chat
+        function displayMessage(message) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `slide-up flex ${message.senderId === appState.userId ? 'justify-end' : 'justify-start'}`;
+            
+            const messageBubble = document.createElement('div');
+            messageBubble.className = `max-w-xs lg:max-w-md px-4 py-2 ${message.senderId === appState.userId ? 'message-sent' : 'message-received'} shadow-sm`;
+            
+            const messageText = document.createElement('p');
+            messageText.className = 'text-sm';
+            messageText.textContent = message.text;
+            
+            const messageTime = document.createElement('p');
+            messageTime.className = `text-xs mt-1 ${message.senderId === appState.userId ? 'text-blue-100' : 'text-gray-500'} text-right`;
+            messageTime.textContent = formatTime(message.timestamp);
+            
+            messageBubble.appendChild(messageText);
+            messageBubble.appendChild(messageTime);
+            messageDiv.appendChild(messageBubble);
+            
+            // Remove the "no messages" placeholder if it exists
+            const placeholder = messagesContainer.querySelector('.text-center');
+            if (placeholder) {
+                placeholder.remove();
+            }
+            
+            messagesContainer.appendChild(messageDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        // Format time for display
+        function formatTime(date) {
+            return new Date(date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        }
+
+        // Show notification
+        function showNotification(message, type) {
+            // Create notification element
+            const notification = document.createElement('div');
+            notification.className = `fixed top-4 right-4 p-4 rounded-lg shadow-lg text-white max-w-sm z-50 slide-up ${
+                type === 'error' ? 'bg-red-500' : 
+                type === 'success' ? 'bg-green-500' : 'bg-blue-500'
+            }`;
+            
+            notification.innerHTML = `
+                <div class="flex items-center">
+                    <i class="fas fa-${type === 'error' ? 'exclamation-triangle' : type === 'success' ? 'check-circle' : 'info-circle'} mr-2"></i>
+                    <span>${message}</span>
+                </div>
+            `;
+            
+            document.body.appendChild(notification);
+            
+            // Remove notification after 3 seconds
+            setTimeout(() => {
+                notification.remove();
+            }, 3000);
+        }
+
+        // Initialize the app when the page loads
+        document.addEventListener('DOMContentLoaded', initApp);
+    </script>
+</body>
+</html>
