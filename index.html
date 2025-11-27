@@ -21,6 +21,8 @@
         .typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
         @keyframes typing { 0%, 80%, 100% { transform: scale(0.8); opacity: 0.5; } 40% { transform: scale(1); opacity: 1; } }
         .friend-item:hover { background-color: #f8fafc; }
+        .shake { animation: shake 0.5s; }
+        @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
     </style>
 </head>
 <body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen flex items-center justify-center p-4">
@@ -161,6 +163,10 @@
                             <i class="fas fa-user-plus mr-2"></i> Add
                         </button>
                     </div>
+                    <div id="friendIdError" class="text-red-500 text-sm mt-2 hidden">
+                        <i class="fas fa-exclamation-circle mr-1"></i>
+                        <span id="errorMessage"></span>
+                    </div>
                 </form>
                 
                 <div class="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
@@ -273,7 +279,9 @@
             isConnectedToWifi: false,
             messages: {},
             onlineUsers: [],
-            typingTimeout: null
+            typingTimeout: null,
+            // Track all registered users in the network
+            networkUsers: {}
         };
 
         // DOM Elements
@@ -293,6 +301,8 @@
         const noFriendsMessage = document.getElementById('noFriendsMessage');
         const addFriendForm = document.getElementById('addFriendForm');
         const friendIdInput = document.getElementById('friendIdInput');
+        const friendIdError = document.getElementById('friendIdError');
+        const errorMessage = document.getElementById('errorMessage');
         const pendingRequestsList = document.getElementById('pendingRequestsList');
         const noPendingRequests = document.getElementById('noPendingRequests');
         const backToDashboard = document.getElementById('backToDashboard');
@@ -351,6 +361,30 @@
             
             // Update online status
             setInterval(updateOnlineStatus, 3000);
+            
+            // Load network users
+            loadNetworkUsers();
+        }
+
+        // Load all registered users in the network
+        function loadNetworkUsers() {
+            // Scan localStorage for all registered users
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key === 'wifiChatUser' || key.startsWith('wifiChatUser_')) {
+                    try {
+                        const userData = JSON.parse(localStorage.getItem(key));
+                        if (userData && userData.userId) {
+                            appState.networkUsers[userData.userId] = {
+                                name: userData.userName,
+                                lastSeen: Date.now()
+                            };
+                        }
+                    } catch (error) {
+                        console.error('Error loading user data:', error);
+                    }
+                }
+            }
         }
 
         // Initialize network simulation
@@ -411,6 +445,11 @@
                 showTypingIndicator(message.senderId, message.senderName);
             } else if (message.type === 'onlineStatus') {
                 updateOnlineUserStatus(message.senderId, message.data);
+            } else if (message.type === 'userValidation') {
+                // Response to user validation request
+                if (message.data === 'userExists' && message.requestId) {
+                    handleUserValidationResponse(message.requestId, true);
+                }
             }
         }
 
@@ -493,6 +532,14 @@
                 return;
             }
             
+            // Check if ID is already taken in the network
+            if (isUserIdTaken(userId)) {
+                showNotification('This ID is already taken. Please choose a different one.', 'error');
+                userIdInput.classList.add('shake');
+                setTimeout(() => userIdInput.classList.remove('shake'), 500);
+                return;
+            }
+            
             // Store user data
             appState.userId = userId;
             appState.userName = userName;
@@ -507,7 +554,19 @@
             
             localStorage.setItem('wifiChatUser', JSON.stringify(userData));
             
+            // Register user in network
+            appState.networkUsers[userId] = {
+                name: userName,
+                lastSeen: Date.now()
+            };
+            
             showDashboard();
+        }
+
+        // Check if user ID is already taken
+        function isUserIdTaken(userId) {
+            // Check if this ID exists in our network users
+            return appState.networkUsers.hasOwnProperty(userId);
         }
 
         // Show dashboard
@@ -644,30 +703,109 @@
             const friendId = friendIdInput.value.trim();
             
             if (friendId.length !== 6) {
-                showNotification('Please enter a valid 6-digit ID', 'error');
+                showError('Please enter a valid 6-digit ID');
                 return;
             }
             
             if (friendId === appState.userId) {
-                showNotification('You cannot add yourself as a friend!', 'error');
+                showError('You cannot add yourself as a friend!');
                 return;
             }
             
             // Check if already friends
             if (appState.friends.some(friend => friend.id === friendId)) {
-                showNotification('This user is already your friend', 'info');
+                showError('This user is already your friend');
                 return;
             }
             
             // Check if request already sent
             if (appState.pendingRequests.some(request => request.id === friendId)) {
-                showNotification('Friend request already sent', 'info');
+                showError('Friend request already sent');
                 return;
             }
             
-            // Send friend request
-            sendFriendRequest(friendId);
-            friendIdInput.value = '';
+            // Validate if user exists in network
+            validateUserExists(friendId)
+                .then(userExists => {
+                    if (userExists) {
+                        // Send friend request
+                        sendFriendRequest(friendId);
+                        friendIdInput.value = '';
+                        hideError();
+                    } else {
+                        showError('User ID not found. Please check the ID and try again.');
+                    }
+                })
+                .catch(() => {
+                    showError('Unable to validate user. Please try again.');
+                });
+        }
+
+        // Validate if user exists in network
+        function validateUserExists(userId) {
+            return new Promise((resolve) => {
+                // First check our local cache
+                if (appState.networkUsers[userId]) {
+                    resolve(true);
+                    return;
+                }
+                
+                // Send validation request to the network
+                const requestId = Date.now().toString();
+                
+                // Set up response listener
+                const responseListener = (e) => {
+                    if (e.key && e.key.startsWith('wifiChat_')) {
+                        try {
+                            const message = JSON.parse(e.newValue);
+                            if (message && message.type === 'userValidation' && 
+                                message.requestId === requestId && message.senderId === userId) {
+                                window.removeEventListener('storage', responseListener);
+                                resolve(message.data === 'userExists');
+                            }
+                        } catch (error) {
+                            // Ignore errors
+                        }
+                    }
+                };
+                
+                window.addEventListener('storage', responseListener);
+                
+                // Send validation request
+                sendNetworkMessage({
+                    type: 'userValidation',
+                    data: 'validateUser',
+                    senderId: appState.userId,
+                    targetId: userId,
+                    requestId: requestId
+                });
+                
+                // Timeout after 3 seconds
+                setTimeout(() => {
+                    window.removeEventListener('storage', responseListener);
+                    resolve(false);
+                }, 3000);
+            });
+        }
+
+        // Handle user validation response
+        function handleUserValidationResponse(requestId, userExists) {
+            // This would be used if we need to respond to validation requests
+            // Currently handled in the network message processing
+        }
+
+        // Show error message
+        function showError(message) {
+            errorMessage.textContent = message;
+            friendIdError.classList.remove('hidden');
+            friendIdInput.classList.add('border-red-500', 'shake');
+            setTimeout(() => friendIdInput.classList.remove('shake'), 500);
+        }
+
+        // Hide error message
+        function hideError() {
+            friendIdError.classList.add('hidden');
+            friendIdInput.classList.remove('border-red-500');
         }
 
         // Send friend request
@@ -679,7 +817,7 @@
                 targetId: friendId
             });
             
-            showNotification('Friend request sent', 'success');
+            showNotification('Friend request sent successfully!', 'success');
         }
 
         // Receive friend request
@@ -706,7 +844,10 @@
             // Update UI
             updatePendingRequests();
             
-            showNotification(`New friend request from ${senderName}`, 'info');
+            showNotification(`New friend request from ${senderName} (ID: ${senderId})`, 'info');
+            
+            // Switch to add friend tab to show the pending request
+            switchTab('addFriend');
         }
 
         // Accept friend request
