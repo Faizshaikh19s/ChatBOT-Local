@@ -20,21 +20,33 @@
         .typing-indicator span:nth-child(1) { animation-delay: -0.32s; }
         .typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
         @keyframes typing { 0%, 80%, 100% { transform: scale(0.8); opacity: 0.5; } 40% { transform: scale(1); opacity: 1; } }
+        .friend-item:hover { background-color: #f8fafc; }
     </style>
 </head>
 <body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen flex items-center justify-center p-4">
     <div class="w-full max-w-md bg-white rounded-2xl shadow-xl overflow-hidden">
-        <!-- User ID Setup Screen -->
-        <div id="setupScreen" class="p-6 fade-in">
+        <!-- User Registration Screen -->
+        <div id="registerScreen" class="p-6 fade-in">
             <div class="text-center mb-8">
                 <div class="w-20 h-20 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-md">
                     <i class="fas fa-wifi text-white text-3xl"></i>
                 </div>
                 <h1 class="text-3xl font-bold text-gray-800">Wi-Fi Direct Chat</h1>
-                <p class="text-gray-600 mt-2">Connect with others on the same network</p>
+                <p class="text-gray-600 mt-2">Connect with friends on the same network</p>
             </div>
             
-            <form id="idForm" class="space-y-6">
+            <form id="registerForm" class="space-y-6">
+                <div>
+                    <label for="userName" class="block text-sm font-medium text-gray-700 mb-2">Your Name</label>
+                    <input 
+                        type="text" 
+                        id="userName" 
+                        required 
+                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                        placeholder="Enter your name"
+                    >
+                </div>
+                
                 <div>
                     <label for="userId" class="block text-sm font-medium text-gray-700 mb-2">Your 6-Digit ID</label>
                     <div class="relative">
@@ -58,7 +70,7 @@
                     type="submit" 
                     class="w-full bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white font-medium py-3 px-4 rounded-lg transition flex items-center justify-center shadow-md"
                 >
-                    <i class="fas fa-sign-in-alt mr-2"></i> Join Chat Network
+                    <i class="fas fa-user-plus mr-2"></i> Create Profile
                 </button>
             </form>
             
@@ -72,41 +84,139 @@
                         <span>Connect to the same Wi-Fi network</span>
                     </li>
                     <li class="flex items-start">
-                        <i class="fas fa-id-card mr-2 mt-1"></i>
-                        <span>Share your ID with friends</span>
+                        <i class="fas fa-user-friends mr-2 mt-1"></i>
+                        <span>Send friend requests using IDs</span>
                     </li>
                     <li class="flex items-start">
                         <i class="fas fa-comments mr-2 mt-1"></i>
-                        <span>Enter their ID to start chatting</span>
+                        <span>Chat with friends when both are online</span>
                     </li>
                 </ul>
             </div>
         </div>
         
-        <!-- Main Chat Screen -->
-        <div id="chatScreen" class="hidden h-screen flex flex-col">
+        <!-- Main Dashboard Screen -->
+        <div id="dashboardScreen" class="hidden h-screen flex flex-col">
             <!-- Header -->
             <div class="bg-gradient-to-r from-blue-500 to-purple-600 text-white p-4 flex items-center justify-between shadow-lg">
                 <div class="flex items-center">
-                    <button id="backButton" class="mr-3 bg-white/20 hover:bg-white/30 p-2 rounded-full transition">
-                        <i class="fas fa-arrow-left"></i>
-                    </button>
+                    <div class="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center mr-3">
+                        <i class="fas fa-user text-white"></i>
+                    </div>
                     <div>
-                        <h2 class="font-semibold">Chat with <span id="partnerIdDisplay" class="font-bold">---</span></h2>
+                        <h2 class="font-semibold" id="userNameDisplay">User</h2>
                         <p class="text-blue-100 text-xs flex items-center">
-                            <i class="fas fa-wifi mr-1"></i> Connected via Wi-Fi Direct
+                            <i class="fas fa-id-card mr-1"></i> ID: <span id="userIdDisplay" class="ml-1 font-mono">---</span>
                         </p>
                     </div>
                 </div>
                 <div class="flex items-center space-x-3">
-                    <div id="connectionIndicator" class="w-3 h-3 bg-green-400 rounded-full pulse-online"></div>
+                    <div id="wifiStatus" class="w-3 h-3 bg-green-400 rounded-full pulse-online"></div>
                     <span class="text-sm">Online</span>
                 </div>
             </div>
             
-            <!-- Connection Status -->
-            <div id="connectionStatus" class="bg-yellow-50 border-b border-yellow-200 p-3 text-center text-sm text-yellow-700 hidden">
-                <i class="fas fa-wifi mr-1"></i> Connecting to partner...
+            <!-- Tabs -->
+            <div class="flex border-b border-gray-200 bg-white">
+                <button id="friendsTab" class="flex-1 py-3 text-center font-medium text-blue-600 border-b-2 border-blue-500">
+                    <i class="fas fa-user-friends mr-2"></i>Friends
+                </button>
+                <button id="addFriendTab" class="flex-1 py-3 text-center font-medium text-gray-500">
+                    <i class="fas fa-user-plus mr-2"></i>Add Friend
+                </button>
+            </div>
+            
+            <!-- Friends List -->
+            <div id="friendsListContainer" class="flex-1 p-4 overflow-y-auto bg-white">
+                <h3 class="font-medium text-gray-700 mb-3">My Friends</h3>
+                <div id="friendsList" class="space-y-2">
+                    <!-- Friends will be dynamically added here -->
+                </div>
+                
+                <div id="noFriendsMessage" class="text-center py-8 text-gray-500">
+                    <i class="fas fa-user-friends text-3xl mb-3 text-gray-300"></i>
+                    <p>No friends yet. Add some friends to start chatting!</p>
+                </div>
+            </div>
+            
+            <!-- Add Friend Section -->
+            <div id="addFriendContainer" class="hidden flex-1 p-4 overflow-y-auto bg-white">
+                <h3 class="font-medium text-gray-700 mb-3">Add New Friend</h3>
+                
+                <form id="addFriendForm" class="mb-6">
+                    <div class="flex space-x-2">
+                        <input 
+                            type="text" 
+                            id="friendIdInput" 
+                            maxlength="6" 
+                            pattern="\d{6}" 
+                            required 
+                            class="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition text-center font-semibold tracking-widest"
+                            placeholder="Friend's ID"
+                        >
+                        <button 
+                            type="submit" 
+                            class="bg-blue-500 hover:bg-blue-600 text-white rounded-lg px-4 flex items-center justify-center transition"
+                        >
+                            <i class="fas fa-user-plus mr-2"></i> Add
+                        </button>
+                    </div>
+                </form>
+                
+                <div class="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                    <h4 class="font-medium text-blue-800 flex items-center">
+                        <i class="fas fa-lightbulb mr-2"></i> How to add friends
+                    </h4>
+                    <ul class="text-sm text-blue-700 mt-2 space-y-2">
+                        <li class="flex items-start">
+                            <i class="fas fa-check-circle mr-2 mt-1 text-green-500"></i>
+                            <span>Both users must be on the same Wi-Fi network</span>
+                        </li>
+                        <li class="flex items-start">
+                            <i class="fas fa-check-circle mr-2 mt-1 text-green-500"></i>
+                            <span>Enter your friend's 6-digit ID</span>
+                        </li>
+                        <li class="flex items-start">
+                            <i class="fas fa-check-circle mr-2 mt-1 text-green-500"></i>
+                            <span>They'll receive a friend request notification</span>
+                        </li>
+                    </ul>
+                </div>
+                
+                <h3 class="font-medium text-gray-700 mb-3">Pending Requests</h3>
+                <div id="pendingRequestsList" class="space-y-2">
+                    <!-- Pending requests will be dynamically added here -->
+                </div>
+                
+                <div id="noPendingRequests" class="text-center py-4 text-gray-500">
+                    <p>No pending friend requests</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Chat Screen -->
+        <div id="chatScreen" class="hidden h-screen flex flex-col">
+            <!-- Header -->
+            <div class="bg-gradient-to-r from-blue-500 to-purple-600 text-white p-4 flex items-center justify-between shadow-lg">
+                <div class="flex items-center">
+                    <button id="backToDashboard" class="mr-3 bg-white/20 hover:bg-white/30 p-2 rounded-full transition">
+                        <i class="fas fa-arrow-left"></i>
+                    </button>
+                    <div>
+                        <h2 class="font-semibold" id="chatPartnerName">Friend</h2>
+                        <p class="text-blue-100 text-xs flex items-center">
+                            <i class="fas fa-id-card mr-1"></i> ID: <span id="chatPartnerId" class="ml-1 font-mono">---</span>
+                            <span id="partnerStatus" class="ml-2 flex items-center">
+                                <span class="w-2 h-2 bg-gray-400 rounded-full mr-1"></span>
+                                <span>Offline</span>
+                            </span>
+                        </p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-3">
+                    <div id="chatConnectionIndicator" class="w-3 h-3 bg-gray-400 rounded-full"></div>
+                    <span class="text-sm" id="chatConnectionStatus">Offline</span>
+                </div>
             </div>
             
             <!-- Messages Container -->
@@ -120,7 +230,7 @@
             <!-- Typing Indicator -->
             <div id="typingIndicator" class="hidden px-4 py-2 bg-white">
                 <div class="text-sm text-gray-500 italic flex items-center">
-                    <span id="typingPartnerId" class="font-semibold mr-1"></span> is typing
+                    <span id="typingPartnerName" class="font-semibold mr-1"></span> is typing
                     <div class="typing-indicator ml-2">
                         <span></span>
                         <span></span>
@@ -138,69 +248,17 @@
                         placeholder="Type a message..." 
                         class="flex-1 border border-gray-300 rounded-full px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
                         maxlength="200"
+                        disabled
                     >
                     <button 
                         id="sendButton" 
-                        class="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white rounded-full w-12 h-12 flex items-center justify-center transition shadow-md"
+                        class="bg-gray-400 text-white rounded-full w-12 h-12 flex items-center justify-center transition"
+                        disabled
                     >
                         <i class="fas fa-paper-plane"></i>
                     </button>
                 </div>
             </div>
-        </div>
-        
-        <!-- Connect to Partner Screen -->
-        <div id="connectScreen" class="hidden p-6 fade-in">
-            <div class="text-center mb-8">
-                <div class="w-20 h-20 bg-gradient-to-r from-green-500 to-blue-500 rounded-full flex items-center justify-center mx-auto mb-4 shadow-md">
-                    <i class="fas fa-user-plus text-white text-3xl"></i>
-                </div>
-                <h1 class="text-3xl font-bold text-gray-800">Connect to Partner</h1>
-                <p class="text-gray-600 mt-2">Enter your partner's ID to start chatting</p>
-            </div>
-            
-            <form id="connectForm" class="space-y-6">
-                <div>
-                    <label for="partnerId" class="block text-sm font-medium text-gray-700 mb-2">Partner's 6-Digit ID</label>
-                    <div class="relative">
-                        <input 
-                            type="text" 
-                            id="partnerId" 
-                            maxlength="6" 
-                            pattern="\d{6}" 
-                            required 
-                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition text-center text-lg font-semibold tracking-widest"
-                            placeholder="654321"
-                        >
-                        <div class="absolute inset-y-0 right-0 flex items-center pr-3">
-                            <i class="fas fa-user-friends text-gray-400"></i>
-                        </div>
-                    </div>
-                </div>
-                
-                <button 
-                    type="submit" 
-                    class="w-full bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white font-medium py-3 px-4 rounded-lg transition flex items-center justify-center shadow-md"
-                >
-                    <i class="fas fa-link mr-2"></i> Connect to Partner
-                </button>
-            </form>
-            
-            <div class="mt-6 p-4 bg-green-50 rounded-lg border border-green-200">
-                <h3 class="font-medium text-green-800 flex items-center">
-                    <i class="fas fa-lightbulb mr-2"></i> Pro Tip
-                </h3>
-                <p class="text-sm text-green-700 mt-2">
-                    Make sure your partner is connected to the same Wi-Fi network and has already set up their ID.
-                </p>
-            </div>
-            
-            <button 
-                id="backToMain" 
-                class="w-full mt-4 bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-3 px-4 rounded-lg transition flex items-center justify-center"
-            >
-                <i class="fas fa-arrow-left mr-2"></i> Back to Main
-            </button>
         </div>
     </div>
 
@@ -208,55 +266,77 @@
         // Application state
         const appState = {
             userId: null,
-            partnerId: null,
-            isConnected: false,
-            messages: [],
-            // Simulated network peers (in a real app, this would be handled by a server)
-            networkPeers: {},
+            userName: null,
+            friends: [],
+            pendingRequests: [],
+            currentChatPartner: null,
+            isConnectedToWifi: false,
+            messages: {},
+            onlineUsers: [],
             typingTimeout: null
         };
 
         // DOM Elements
-        const setupScreen = document.getElementById('setupScreen');
+        const registerScreen = document.getElementById('registerScreen');
+        const dashboardScreen = document.getElementById('dashboardScreen');
         const chatScreen = document.getElementById('chatScreen');
-        const connectScreen = document.getElementById('connectScreen');
-        const idForm = document.getElementById('idForm');
-        const connectForm = document.getElementById('connectForm');
+        const registerForm = document.getElementById('registerForm');
+        const userNameInput = document.getElementById('userName');
         const userIdInput = document.getElementById('userId');
-        const partnerIdInput = document.getElementById('partnerId');
-        const partnerIdDisplay = document.getElementById('partnerIdDisplay');
+        const userNameDisplay = document.getElementById('userNameDisplay');
+        const userIdDisplay = document.getElementById('userIdDisplay');
+        const friendsTab = document.getElementById('friendsTab');
+        const addFriendTab = document.getElementById('addFriendTab');
+        const friendsListContainer = document.getElementById('friendsListContainer');
+        const addFriendContainer = document.getElementById('addFriendContainer');
+        const friendsList = document.getElementById('friendsList');
+        const noFriendsMessage = document.getElementById('noFriendsMessage');
+        const addFriendForm = document.getElementById('addFriendForm');
+        const friendIdInput = document.getElementById('friendIdInput');
+        const pendingRequestsList = document.getElementById('pendingRequestsList');
+        const noPendingRequests = document.getElementById('noPendingRequests');
+        const backToDashboard = document.getElementById('backToDashboard');
+        const chatPartnerName = document.getElementById('chatPartnerName');
+        const chatPartnerId = document.getElementById('chatPartnerId');
+        const partnerStatus = document.getElementById('partnerStatus');
+        const chatConnectionIndicator = document.getElementById('chatConnectionIndicator');
+        const chatConnectionStatus = document.getElementById('chatConnectionStatus');
         const messagesContainer = document.getElementById('messagesContainer');
         const messageInput = document.getElementById('messageInput');
         const sendButton = document.getElementById('sendButton');
-        const backButton = document.getElementById('backButton');
-        const backToMain = document.getElementById('backToMain');
-        const connectionStatus = document.getElementById('connectionStatus');
-        const connectionIndicator = document.getElementById('connectionIndicator');
         const typingIndicator = document.getElementById('typingIndicator');
-        const typingPartnerId = document.getElementById('typingPartnerId');
+        const typingPartnerName = document.getElementById('typingPartnerName');
+        const wifiStatus = document.getElementById('wifiStatus');
 
         // Initialize the app
         function initApp() {
-            // Check if user ID is already stored
-            const storedUserId = localStorage.getItem('wifiChatUserId');
-            if (storedUserId) {
-                appState.userId = storedUserId;
-                showConnectScreen();
+            // Check if user is already registered
+            const storedUser = localStorage.getItem('wifiChatUser');
+            if (storedUser) {
+                const userData = JSON.parse(storedUser);
+                appState.userId = userData.userId;
+                appState.userName = userData.userName;
+                appState.friends = userData.friends || [];
+                appState.pendingRequests = userData.pendingRequests || [];
+                appState.messages = userData.messages || {};
+                
+                showDashboard();
             }
             
             // Set up event listeners
-            idForm.addEventListener('submit', handleUserIdSubmit);
-            connectForm.addEventListener('submit', handleConnectSubmit);
+            registerForm.addEventListener('submit', handleUserRegistration);
+            friendsTab.addEventListener('click', () => switchTab('friends'));
+            addFriendTab.addEventListener('click', () => switchTab('addFriend'));
+            addFriendForm.addEventListener('submit', handleAddFriend);
+            backToDashboard.addEventListener('click', showDashboard);
             sendButton.addEventListener('click', sendMessage);
             messageInput.addEventListener('keypress', (e) => {
                 if (e.key === 'Enter') sendMessage();
             });
             messageInput.addEventListener('input', handleTyping);
-            backButton.addEventListener('click', showConnectScreen);
-            backToMain.addEventListener('click', showConnectScreen);
             
             // Validate numeric input for ID fields
-            [userIdInput, partnerIdInput].forEach(input => {
+            [userIdInput, friendIdInput].forEach(input => {
                 input.addEventListener('input', (e) => {
                     e.target.value = e.target.value.replace(/\D/g, '');
                 });
@@ -264,35 +344,27 @@
             
             // Initialize network simulation
             initNetworkSimulation();
+            
+            // Check Wi-Fi connection status
+            checkWifiConnection();
+            setInterval(checkWifiConnection, 5000);
+            
+            // Update online status
+            setInterval(updateOnlineStatus, 3000);
         }
 
         // Initialize network simulation
         function initNetworkSimulation() {
-            // In a real app, this would be a WebSocket connection to a server
-            // For simulation, we'll use localStorage to simulate network communication
+            // Use localStorage to simulate network communication
             window.addEventListener('storage', handleNetworkEvent);
             
             // Also check for messages periodically
-            setInterval(checkForMessages, 500);
+            setInterval(checkForNetworkEvents, 1000);
         }
 
-        // Handle network events (simulated)
-        function handleNetworkEvent(e) {
-            if (e.key && e.key.startsWith('wifiChat_')) {
-                try {
-                    const message = JSON.parse(e.newValue);
-                    if (message && message.targetId === appState.userId) {
-                        processIncomingMessage(message);
-                    }
-                } catch (error) {
-                    console.error('Error processing network message:', error);
-                }
-            }
-        }
-
-        // Check for new messages (simulated)
-        function checkForMessages() {
-            // Check for messages targeted to this user
+        // Check for network events
+        function checkForNetworkEvents() {
+            // Check for messages and requests targeted to this user
             for (let i = 0; i < localStorage.length; i++) {
                 const key = localStorage.key(i);
                 if (key && key.startsWith('wifiChat_')) {
@@ -308,128 +380,498 @@
                     }
                 }
             }
+            
+            // Update friends list with online status
+            updateFriendsList();
         }
 
-        // Process incoming message
-        function processIncomingMessage(message) {
-            if (message.type === 'chat') {
-                receiveMessage(message.data);
-            } else if (message.type === 'typing') {
-                showTypingIndicator(message.senderId);
-            } else if (message.type === 'connection') {
-                if (message.data === 'connected' && message.senderId === appState.partnerId) {
-                    handlePartnerConnected();
+        // Handle network events
+        function handleNetworkEvent(e) {
+            if (e.key && e.key.startsWith('wifiChat_')) {
+                try {
+                    const message = JSON.parse(e.newValue);
+                    if (message && message.targetId === appState.userId) {
+                        processIncomingMessage(message);
+                    }
+                } catch (error) {
+                    console.error('Error processing network message:', error);
                 }
             }
         }
 
-        // Handle user ID submission
-        function handleUserIdSubmit(e) {
+        // Process incoming message
+        function processIncomingMessage(message) {
+            if (message.type === 'friendRequest') {
+                receiveFriendRequest(message.senderId, message.senderName);
+            } else if (message.type === 'friendRequestAccepted') {
+                handleFriendRequestAccepted(message.senderId, message.senderName);
+            } else if (message.type === 'chat') {
+                receiveMessage(message.data);
+            } else if (message.type === 'typing') {
+                showTypingIndicator(message.senderId, message.senderName);
+            } else if (message.type === 'onlineStatus') {
+                updateOnlineUserStatus(message.senderId, message.data);
+            }
+        }
+
+        // Check Wi-Fi connection (simulated)
+        function checkWifiConnection() {
+            // In a real app, this would check actual network connectivity
+            // For simulation, we'll assume we're always connected to Wi-Fi
+            appState.isConnectedToWifi = true;
+            wifiStatus.className = "w-3 h-3 bg-green-400 rounded-full pulse-online";
+            
+            // Broadcast online status
+            if (appState.userId) {
+                broadcastOnlineStatus();
+            }
+        }
+
+        // Broadcast online status to network
+        function broadcastOnlineStatus() {
+            sendNetworkMessage({
+                type: 'onlineStatus',
+                data: 'online',
+                senderId: appState.userId,
+                senderName: appState.userName,
+                targetId: 'broadcast' // Send to all users
+            });
+        }
+
+        // Update online user status
+        function updateOnlineUserStatus(userId, status) {
+            // Add to online users list
+            const existingIndex = appState.onlineUsers.findIndex(user => user.id === userId);
+            if (existingIndex >= 0) {
+                appState.onlineUsers[existingIndex].lastSeen = Date.now();
+            } else {
+                appState.onlineUsers.push({
+                    id: userId,
+                    lastSeen: Date.now()
+                });
+            }
+            
+            // Update friends list if needed
+            updateFriendsList();
+            
+            // Update chat status if currently chatting with this user
+            if (appState.currentChatPartner && appState.currentChatPartner.id === userId) {
+                updateChatConnectionStatus();
+            }
+        }
+
+        // Update online status periodically
+        function updateOnlineStatus() {
+            // Remove users who haven't been seen in 10 seconds
+            const now = Date.now();
+            appState.onlineUsers = appState.onlineUsers.filter(user => 
+                now - user.lastSeen < 10000
+            );
+            
+            // Update friends list
+            updateFriendsList();
+            
+            // Update chat status if needed
+            if (appState.currentChatPartner) {
+                updateChatConnectionStatus();
+            }
+        }
+
+        // Handle user registration
+        function handleUserRegistration(e) {
             e.preventDefault();
+            const userName = userNameInput.value.trim();
             const userId = userIdInput.value.trim();
+            
+            if (!userName) {
+                showNotification('Please enter your name', 'error');
+                return;
+            }
             
             if (userId.length !== 6) {
                 showNotification('Please enter a 6-digit ID', 'error');
                 return;
             }
             
-            // Store user ID in localStorage
-            localStorage.setItem('wifiChatUserId', userId);
+            // Store user data
             appState.userId = userId;
+            appState.userName = userName;
             
-            showConnectScreen();
+            const userData = {
+                userId: userId,
+                userName: userName,
+                friends: [],
+                pendingRequests: [],
+                messages: {}
+            };
+            
+            localStorage.setItem('wifiChatUser', JSON.stringify(userData));
+            
+            showDashboard();
         }
 
-        // Show connect screen
-        function showConnectScreen() {
-            setupScreen.classList.add('hidden');
+        // Show dashboard
+        function showDashboard() {
+            registerScreen.classList.add('hidden');
             chatScreen.classList.add('hidden');
-            connectScreen.classList.remove('hidden');
+            dashboardScreen.classList.remove('hidden');
+            
+            // Update user info
+            userNameDisplay.textContent = appState.userName;
+            userIdDisplay.textContent = appState.userId;
+            
+            // Update friends list
+            updateFriendsList();
+            
+            // Update pending requests
+            updatePendingRequests();
         }
 
-        // Handle connect to partner
-        function handleConnectSubmit(e) {
-            e.preventDefault();
-            const partnerId = partnerIdInput.value.trim();
+        // Switch between tabs
+        function switchTab(tab) {
+            if (tab === 'friends') {
+                friendsTab.className = 'flex-1 py-3 text-center font-medium text-blue-600 border-b-2 border-blue-500';
+                addFriendTab.className = 'flex-1 py-3 text-center font-medium text-gray-500';
+                friendsListContainer.classList.remove('hidden');
+                addFriendContainer.classList.add('hidden');
+            } else {
+                friendsTab.className = 'flex-1 py-3 text-center font-medium text-gray-500';
+                addFriendTab.className = 'flex-1 py-3 text-center font-medium text-blue-600 border-b-2 border-blue-500';
+                friendsListContainer.classList.add('hidden');
+                addFriendContainer.classList.remove('hidden');
+            }
+        }
+
+        // Update friends list
+        function updateFriendsList() {
+            friendsList.innerHTML = '';
             
-            if (partnerId.length !== 6) {
-                showNotification('Please enter a valid 6-digit partner ID', 'error');
+            if (appState.friends.length === 0) {
+                noFriendsMessage.classList.remove('hidden');
                 return;
             }
             
-            if (partnerId === appState.userId) {
-                showNotification('You cannot chat with yourself!', 'error');
-                return;
-            }
+            noFriendsMessage.classList.add('hidden');
             
-            appState.partnerId = partnerId;
-            partnerIdDisplay.textContent = partnerId;
-            
-            // Show connecting status
-            connectionStatus.classList.remove('hidden');
-            connectionIndicator.classList.remove('bg-green-400', 'pulse-online');
-            connectionIndicator.classList.add('bg-yellow-400');
-            
-            // Simulate connection attempt
-            setTimeout(() => {
-                // In a real app, you would check if the partner exists on the network
-                // For simulation, we'll assume the partner is available
+            appState.friends.forEach(friend => {
+                const isOnline = appState.onlineUsers.some(user => user.id === friend.id);
                 
-                // Send connection request to partner
-                sendNetworkMessage({
-                    type: 'connection',
-                    data: 'connected',
-                    senderId: appState.userId,
-                    targetId: appState.partnerId
+                const friendItem = document.createElement('div');
+                friendItem.className = 'friend-item p-3 border border-gray-200 rounded-lg flex items-center justify-between cursor-pointer hover:bg-gray-50 transition';
+                friendItem.addEventListener('click', () => startChat(friend));
+                
+                friendItem.innerHTML = `
+                    <div class="flex items-center">
+                        <div class="w-10 h-10 bg-gradient-to-r from-blue-400 to-purple-500 rounded-full flex items-center justify-center text-white font-semibold mr-3">
+                            ${friend.name.charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                            <h4 class="font-medium">${friend.name}</h4>
+                            <p class="text-xs text-gray-500 flex items-center">
+                                <span class="w-2 h-2 rounded-full mr-1 ${isOnline ? 'bg-green-500' : 'bg-gray-400'}"></span>
+                                ${isOnline ? 'Online' : 'Offline'}
+                            </p>
+                        </div>
+                    </div>
+                    <div class="text-blue-500">
+                        <i class="fas fa-comment"></i>
+                    </div>
+                `;
+                
+                friendsList.appendChild(friendItem);
+            });
+        }
+
+        // Update pending requests
+        function updatePendingRequests() {
+            pendingRequestsList.innerHTML = '';
+            
+            if (appState.pendingRequests.length === 0) {
+                noPendingRequests.classList.remove('hidden');
+                return;
+            }
+            
+            noPendingRequests.classList.add('hidden');
+            
+            appState.pendingRequests.forEach(request => {
+                const requestItem = document.createElement('div');
+                requestItem.className = 'p-3 border border-gray-200 rounded-lg flex items-center justify-between';
+                
+                requestItem.innerHTML = `
+                    <div class="flex items-center">
+                        <div class="w-10 h-10 bg-gradient-to-r from-blue-400 to-purple-500 rounded-full flex items-center justify-center text-white font-semibold mr-3">
+                            ${request.name.charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                            <h4 class="font-medium">${request.name}</h4>
+                            <p class="text-xs text-gray-500">ID: ${request.id}</p>
+                        </div>
+                    </div>
+                    <div class="flex space-x-2">
+                        <button class="accept-request bg-green-500 hover:bg-green-600 text-white p-2 rounded-full transition" data-id="${request.id}">
+                            <i class="fas fa-check"></i>
+                        </button>
+                        <button class="reject-request bg-red-500 hover:bg-red-600 text-white p-2 rounded-full transition" data-id="${request.id}">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                `;
+                
+                pendingRequestsList.appendChild(requestItem);
+            });
+            
+            // Add event listeners to accept/reject buttons
+            document.querySelectorAll('.accept-request').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const friendId = button.getAttribute('data-id');
+                    acceptFriendRequest(friendId);
                 });
-                
-                // Assume connection is successful after a short delay
-                setTimeout(() => {
-                    connectionStatus.classList.add('hidden');
-                    connectionIndicator.classList.remove('bg-yellow-400');
-                    connectionIndicator.classList.add('bg-green-400', 'pulse-online');
-                    appState.isConnected = true;
-                    showChatScreen();
-                    
-                    showNotification(`Connected to partner ${appState.partnerId}`, 'success');
-                }, 1500);
-            }, 1000);
+            });
+            
+            document.querySelectorAll('.reject-request').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const friendId = button.getAttribute('data-id');
+                    rejectFriendRequest(friendId);
+                });
+            });
         }
 
-        // Handle partner connected
-        function handlePartnerConnected() {
-            if (!appState.isConnected && appState.partnerId) {
-                connectionStatus.classList.add('hidden');
-                connectionIndicator.classList.remove('bg-yellow-400');
-                connectionIndicator.classList.add('bg-green-400', 'pulse-online');
-                appState.isConnected = true;
-                
-                showNotification(`Partner ${appState.partnerId} connected to you`, 'success');
+        // Handle add friend
+        function handleAddFriend(e) {
+            e.preventDefault();
+            const friendId = friendIdInput.value.trim();
+            
+            if (friendId.length !== 6) {
+                showNotification('Please enter a valid 6-digit ID', 'error');
+                return;
             }
+            
+            if (friendId === appState.userId) {
+                showNotification('You cannot add yourself as a friend!', 'error');
+                return;
+            }
+            
+            // Check if already friends
+            if (appState.friends.some(friend => friend.id === friendId)) {
+                showNotification('This user is already your friend', 'info');
+                return;
+            }
+            
+            // Check if request already sent
+            if (appState.pendingRequests.some(request => request.id === friendId)) {
+                showNotification('Friend request already sent', 'info');
+                return;
+            }
+            
+            // Send friend request
+            sendFriendRequest(friendId);
+            friendIdInput.value = '';
         }
 
-        // Show chat screen
-        function showChatScreen() {
-            setupScreen.classList.add('hidden');
-            connectScreen.classList.add('hidden');
+        // Send friend request
+        function sendFriendRequest(friendId) {
+            sendNetworkMessage({
+                type: 'friendRequest',
+                senderId: appState.userId,
+                senderName: appState.userName,
+                targetId: friendId
+            });
+            
+            showNotification('Friend request sent', 'success');
+        }
+
+        // Receive friend request
+        function receiveFriendRequest(senderId, senderName) {
+            // Check if already friends
+            if (appState.friends.some(friend => friend.id === senderId)) {
+                return;
+            }
+            
+            // Check if request already exists
+            if (appState.pendingRequests.some(request => request.id === senderId)) {
+                return;
+            }
+            
+            // Add to pending requests
+            appState.pendingRequests.push({
+                id: senderId,
+                name: senderName
+            });
+            
+            // Update storage
+            updateUserStorage();
+            
+            // Update UI
+            updatePendingRequests();
+            
+            showNotification(`New friend request from ${senderName}`, 'info');
+        }
+
+        // Accept friend request
+        function acceptFriendRequest(friendId) {
+            // Find the request
+            const requestIndex = appState.pendingRequests.findIndex(request => request.id === friendId);
+            if (requestIndex === -1) return;
+            
+            const friend = appState.pendingRequests[requestIndex];
+            
+            // Remove from pending requests
+            appState.pendingRequests.splice(requestIndex, 1);
+            
+            // Add to friends
+            appState.friends.push({
+                id: friend.id,
+                name: friend.name
+            });
+            
+            // Update storage
+            updateUserStorage();
+            
+            // Update UI
+            updatePendingRequests();
+            updateFriendsList();
+            
+            // Notify the sender that request was accepted
+            sendNetworkMessage({
+                type: 'friendRequestAccepted',
+                senderId: appState.userId,
+                senderName: appState.userName,
+                targetId: friend.id
+            });
+            
+            showNotification(`You are now friends with ${friend.name}`, 'success');
+        }
+
+        // Reject friend request
+        function rejectFriendRequest(friendId) {
+            // Find the request
+            const requestIndex = appState.pendingRequests.findIndex(request => request.id === friendId);
+            if (requestIndex === -1) return;
+            
+            const friend = appState.pendingRequests[requestIndex];
+            
+            // Remove from pending requests
+            appState.pendingRequests.splice(requestIndex, 1);
+            
+            // Update storage
+            updateUserStorage();
+            
+            // Update UI
+            updatePendingRequests();
+            
+            showNotification(`Friend request from ${friend.name} rejected`, 'info');
+        }
+
+        // Handle friend request accepted
+        function handleFriendRequestAccepted(senderId, senderName) {
+            // Check if already friends
+            if (appState.friends.some(friend => friend.id === senderId)) {
+                return;
+            }
+            
+            // Add to friends
+            appState.friends.push({
+                id: senderId,
+                name: senderName
+            });
+            
+            // Update storage
+            updateUserStorage();
+            
+            // Update UI
+            updateFriendsList();
+            
+            showNotification(`You are now friends with ${senderName}`, 'success');
+        }
+
+        // Start chat with friend
+        function startChat(friend) {
+            appState.currentChatPartner = friend;
+            
+            // Update chat UI
+            chatPartnerName.textContent = friend.name;
+            chatPartnerId.textContent = friend.id;
+            
+            // Update connection status
+            updateChatConnectionStatus();
+            
+            // Show chat screen
+            dashboardScreen.classList.add('hidden');
             chatScreen.classList.remove('hidden');
             
-            // Clear any previous messages
+            // Load messages
+            loadMessages();
+            
+            // Focus on message input if partner is online
+            const isOnline = appState.onlineUsers.some(user => user.id === friend.id);
+            if (isOnline) {
+                messageInput.disabled = false;
+                messageInput.focus();
+            }
+        }
+
+        // Update chat connection status
+        function updateChatConnectionStatus() {
+            if (!appState.currentChatPartner) return;
+            
+            const isOnline = appState.onlineUsers.some(user => user.id === appState.currentChatPartner.id);
+            const isSameWifi = appState.isConnectedToWifi;
+            
+            if (isOnline && isSameWifi) {
+                chatConnectionIndicator.className = "w-3 h-3 bg-green-400 rounded-full pulse-online";
+                chatConnectionStatus.textContent = "Online";
+                partnerStatus.innerHTML = `<span class="w-2 h-2 bg-green-500 rounded-full mr-1"></span><span>Online</span>`;
+                
+                // Enable message input
+                messageInput.disabled = false;
+                messageInput.placeholder = "Type a message...";
+                sendButton.className = "bg-blue-500 hover:bg-blue-600 text-white rounded-full w-12 h-12 flex items-center justify-center transition";
+                sendButton.disabled = false;
+            } else {
+                chatConnectionIndicator.className = "w-3 h-3 bg-gray-400 rounded-full";
+                chatConnectionStatus.textContent = "Offline";
+                partnerStatus.innerHTML = `<span class="w-2 h-2 bg-gray-400 rounded-full mr-1"></span><span>Offline</span>`;
+                
+                // Disable message input
+                messageInput.disabled = true;
+                messageInput.placeholder = "Friend is offline";
+                sendButton.className = "bg-gray-400 text-white rounded-full w-12 h-12 flex items-center justify-center transition";
+                sendButton.disabled = true;
+            }
+        }
+
+        // Load messages for current chat
+        function loadMessages() {
+            if (!appState.currentChatPartner) return;
+            
             messagesContainer.innerHTML = '';
             
-            // Display any stored messages
-            appState.messages.forEach(message => {
+            const chatId = getChatId(appState.currentChatPartner.id);
+            const messages = appState.messages[chatId] || [];
+            
+            if (messages.length === 0) {
+                messagesContainer.innerHTML = `
+                    <div class="text-center text-gray-500 text-sm py-8">
+                        <i class="fas fa-comment-dots text-3xl mb-3 block text-blue-300"></i>
+                        <p>No messages yet. Start a conversation!</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            messages.forEach(message => {
                 displayMessage(message);
             });
             
-            // Focus on message input
-            messageInput.focus();
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
         }
 
         // Send a message
         function sendMessage() {
             const text = messageInput.value.trim();
-            if (!text || !appState.isConnected) return;
+            if (!text || !appState.currentChatPartner) return;
             
             // Create message object
             const message = {
@@ -440,26 +882,36 @@
                 type: 'sent'
             };
             
-            // Add to messages and display
-            appState.messages.push(message);
+            // Add to messages
+            const chatId = getChatId(appState.currentChatPartner.id);
+            if (!appState.messages[chatId]) {
+                appState.messages[chatId] = [];
+            }
+            appState.messages[chatId].push(message);
+            
+            // Update storage
+            updateUserStorage();
+            
+            // Display message
             displayMessage(message);
             
             // Clear input
             messageInput.value = '';
             
-            // Send via simulated network
+            // Send via network
             sendNetworkMessage({
                 type: 'chat',
                 data: message,
                 senderId: appState.userId,
-                targetId: appState.partnerId
+                senderName: appState.userName,
+                targetId: appState.currentChatPartner.id
             });
             
             // Clear typing indicator
             clearTypingIndicator();
         }
 
-        // Send message via simulated network
+        // Send message via network
         function sendNetworkMessage(message) {
             const key = `wifiChat_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
             localStorage.setItem(key, JSON.stringify(message));
@@ -470,26 +922,56 @@
 
         // Receive a message
         function receiveMessage(message) {
+            // Only process if we're chatting with this user
+            if (!appState.currentChatPartner || appState.currentChatPartner.id !== message.senderId) {
+                // Still store the message for later
+                const chatId = getChatId(message.senderId);
+                if (!appState.messages[chatId]) {
+                    appState.messages[chatId] = [];
+                }
+                appState.messages[chatId].push({
+                    ...message,
+                    type: 'received'
+                });
+                
+                updateUserStorage();
+                return;
+            }
+            
+            // Mark as received
             message.type = 'received';
-            appState.messages.push(message);
-            displayMessage(message);
+            
+            // Add to messages
+            const chatId = getChatId(message.senderId);
+            if (!appState.messages[chatId]) {
+                appState.messages[chatId] = [];
+            }
+            appState.messages[chatId].push(message);
+            
+            // Update storage
+            updateUserStorage();
+            
+            // Display message if we're in the chat
+            if (appState.currentChatPartner && appState.currentChatPartner.id === message.senderId) {
+                displayMessage(message);
+            }
             
             // Show notification if tab is not active
             if (document.hidden) {
-                showNotification(`New message from ${message.senderId}`, 'info');
+                showNotification(`New message from ${message.senderId === appState.userId ? 'You' : appState.currentChatPartner.name}`, 'info');
             }
         }
 
         // Handle typing indicator
         function handleTyping() {
-            if (!appState.isConnected) return;
+            if (!appState.currentChatPartner) return;
             
             // Send typing indicator
             sendNetworkMessage({
                 type: 'typing',
-                data: 'typing',
                 senderId: appState.userId,
-                targetId: appState.partnerId
+                senderName: appState.userName,
+                targetId: appState.currentChatPartner.id
             });
             
             // Clear previous timeout
@@ -504,9 +986,9 @@
         }
 
         // Show typing indicator
-        function showTypingIndicator(partnerId) {
-            if (partnerId === appState.partnerId) {
-                typingPartnerId.textContent = partnerId;
+        function showTypingIndicator(partnerId, partnerName) {
+            if (appState.currentChatPartner && appState.currentChatPartner.id === partnerId) {
+                typingPartnerName.textContent = partnerName;
                 typingIndicator.classList.remove('hidden');
                 
                 // Auto-hide after 3 seconds
@@ -523,6 +1005,12 @@
 
         // Display a message in the chat
         function displayMessage(message) {
+            // Remove the "no messages" placeholder if it exists
+            const placeholder = messagesContainer.querySelector('.text-center');
+            if (placeholder) {
+                placeholder.remove();
+            }
+            
             const messageDiv = document.createElement('div');
             messageDiv.className = `slide-up flex ${message.senderId === appState.userId ? 'justify-end' : 'justify-start'}`;
             
@@ -541,14 +1029,26 @@
             messageBubble.appendChild(messageTime);
             messageDiv.appendChild(messageBubble);
             
-            // Remove the "no messages" placeholder if it exists
-            const placeholder = messagesContainer.querySelector('.text-center');
-            if (placeholder) {
-                placeholder.remove();
-            }
-            
             messagesContainer.appendChild(messageDiv);
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        // Get chat ID for storage
+        function getChatId(partnerId) {
+            return [appState.userId, partnerId].sort().join('_');
+        }
+
+        // Update user data in storage
+        function updateUserStorage() {
+            const userData = {
+                userId: appState.userId,
+                userName: appState.userName,
+                friends: appState.friends,
+                pendingRequests: appState.pendingRequests,
+                messages: appState.messages
+            };
+            
+            localStorage.setItem('wifiChatUser', JSON.stringify(userData));
         }
 
         // Format time for display
